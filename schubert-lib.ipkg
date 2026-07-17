@@ -1,0 +1,8 @@
+package schubert-lib
+
+sourcedir = "src"
+
+modules = Duration
+        , Scales
+        , Melody
+        , Midi

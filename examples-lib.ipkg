@@ -1,0 +1,5 @@
+package examples-lib
+
+sourcedir = "examples"
+
+modules = Twinkle

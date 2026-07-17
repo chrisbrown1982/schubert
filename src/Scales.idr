@@ -35,53 +35,78 @@ public export
 majorToneShape : Vect 7 Step 
 majorToneShape = [Tone, Tone, Semitone, Tone, Tone, Tone, Semitone]
 
-public export 
-upSemitone : Note -> Note
-upSemitone C      = CSharp 
-upSemitone CSharp = D 
-upSemitone DFlat  = D
-upSemitone D      = DSharp
-upSemitone DSharp = E 
-upSemitone EFlat  = E 
-upSemitone E      = F 
-upSemitone F      = FSharp 
-upSemitone FSharp = G
-upSemitone GFlat  = G 
-upSemitone G      = GSharp 
-upSemitone GSharp = A 
-upSemitone AFlat  = A
-upSemitone A      = ASharp
-upSemitone ASharp = B 
-upSemitone BFlat  = B
-upSemitone B      = C 
+||| Steps one pitch class up the chromatic circle, ignoring register.
+||| Wraps silently at B -> C; callers that care about register crossing
+||| that boundary must track it themselves (see `Pitch`'s `upSemitone`).
+classUpSemitone : Note -> Note
+classUpSemitone C      = CSharp
+classUpSemitone CSharp = D
+classUpSemitone DFlat  = D
+classUpSemitone D      = DSharp
+classUpSemitone DSharp = E
+classUpSemitone EFlat  = E
+classUpSemitone E      = F
+classUpSemitone F      = FSharp
+classUpSemitone FSharp = G
+classUpSemitone GFlat  = G
+classUpSemitone G      = GSharp
+classUpSemitone GSharp = A
+classUpSemitone AFlat  = A
+classUpSemitone A      = ASharp
+classUpSemitone ASharp = B
+classUpSemitone BFlat  = B
+classUpSemitone B      = C
+
+||| Steps one pitch class down the chromatic circle, ignoring register.
+||| Wraps silently at C -> B; see `classUpSemitone`.
+classDownSemitone : Note -> Note
+classDownSemitone C        = B
+classDownSemitone B        = BFlat
+classDownSemitone BFlat    = A
+classDownSemitone ASharp   = A
+classDownSemitone A        = AFlat
+classDownSemitone AFlat    = G
+classDownSemitone GSharp   = G
+classDownSemitone G        = GFlat
+classDownSemitone GFlat    = F
+classDownSemitone FSharp   = F
+classDownSemitone F        = E
+classDownSemitone E        = EFlat
+classDownSemitone EFlat    = D
+classDownSemitone DSharp   = D
+classDownSemitone D        = DFlat
+classDownSemitone DFlat    = C
+classDownSemitone CSharp   = C
+
+||| A pitch class at a specific register, using the MIDI convention
+||| that middle C (C4) has `register = 4`.
+public export
+data Pitch : Type where
+  MkPitch : (pitchClass : Note) -> (register : Int) -> Pitch
+
+||| Steps one semitone up. Bumps the register on the one transition
+||| where the pitch class wraps (B -> C); every other step leaves the
+||| register untouched.
+public export
+upSemitone : Pitch -> Pitch
+upSemitone (MkPitch B reg) = MkPitch C (reg + 1)
+upSemitone (MkPitch n reg) = MkPitch (classUpSemitone n) reg
 
 public export
-upTone : Note -> Note 
-upTone n = upSemitone (upSemitone n)
+upTone : Pitch -> Pitch
+upTone p = upSemitone (upSemitone p)
+
+||| Steps one semitone down. Bumps the register on the one transition
+||| where the pitch class wraps (C -> B); every other step leaves the
+||| register untouched.
+public export
+downSemitone : Pitch -> Pitch
+downSemitone (MkPitch C reg) = MkPitch B (reg - 1)
+downSemitone (MkPitch n reg) = MkPitch (classDownSemitone n) reg
 
 public export
-downSemitone : Note -> Note 
-downSemitone C        = B
-downSemitone B        = BFlat 
-downSemitone BFlat    = A 
-downSemitone ASharp   = A
-downSemitone A        = AFlat 
-downSemitone AFlat    = G 
-downSemitone GSharp   = G
-downSemitone G        = GFlat 
-downSemitone GFlat    = F 
-downSemitone FSharp   = F 
-downSemitone F        = E
-downSemitone E        = EFlat 
-downSemitone EFlat    = D 
-downSemitone DSharp   = D 
-downSemitone D        = DFlat 
-downSemitone DFlat    = C
-downSemitone CSharp   = C
-
-public export 
-downTone : Note -> Note 
-downTone n = downSemitone (downSemitone n) 
+downTone : Pitch -> Pitch
+downTone p = downSemitone (downSemitone p)
 
 
 public export
@@ -94,48 +119,48 @@ data Degree : Type where
     Submediant  : Degree
     Leading     : Degree 
 
-public export 
-Scale : Type 
-Scale = Vect 8 Note 
+public export
+Scale : Type
+Scale = Vect 8 Pitch
 
-public export 
-createMajor : (tonic : Note) -> (shape : Vect n Step) -> Vect (n+1) Note 
-createMajor tonic [] = [tonic] 
-createMajor tonic (Tone :: steps) = tonic :: createMajor (upTone tonic) steps  
+public export
+createMajor : (tonic : Pitch) -> (shape : Vect n Step) -> Vect (n+1) Pitch
+createMajor tonic [] = [tonic]
+createMajor tonic (Tone :: steps) = tonic :: createMajor (upTone tonic) steps
 createMajor tonic (Semitone :: steps) = tonic :: createMajor (upSemitone tonic) steps
 
 public export
-majorScale : (tonic : Note) -> Scale
+majorScale : (tonic : Pitch) -> Scale
 majorScale tonic = createMajor tonic majorToneShape
 
 public export
-tonic : Scale -> Note 
-tonic scale = index 0 scale 
+tonic : Scale -> Pitch
+tonic scale = index 0 scale
 
 public export
-supertonic : Scale -> Note 
-supertonic scale = index 1 scale 
+supertonic : Scale -> Pitch
+supertonic scale = index 1 scale
 
 public export
-mediant : Scale -> Note 
-mediant scale = index 2 scale 
+mediant : Scale -> Pitch
+mediant scale = index 2 scale
 
 public export
-subdominant : Scale -> Note 
-subdominant scale = index 3 scale 
+subdominant : Scale -> Pitch
+subdominant scale = index 3 scale
 
 public export
-dominant : Scale -> Note 
+dominant : Scale -> Pitch
 dominant scale = index 4 scale
 
 public export
-submediant : Scale -> Note 
-submediant scale = index 5 scale 
+submediant : Scale -> Pitch
+submediant scale = index 5 scale
 
 public export
-leadingtone : Scale -> Note 
-leadingtone scale = index 6 scale 
+leadingtone : Scale -> Pitch
+leadingtone scale = index 6 scale
 
 public export
-octave : Scale -> Note 
-octave scale = index 7 scale 
+octave : Scale -> Pitch
+octave scale = index 7 scale
